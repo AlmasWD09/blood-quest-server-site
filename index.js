@@ -413,8 +413,23 @@ async function run() {
             const query = { role: 'donor' };
             const total_user = await usersCollection.countDocuments(query);
 
+            // Sum total funding price
+            const fundingResult = await fundsCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        total_funding_price: 
+                        { $sum: 
+                            { $toDouble: "$amount" } // total fund_price
+                        }
+                    }
+                }
+            ]).toArray();
+
+            const total_funding_price = fundingResult.length > 0 ? fundingResult[0].total_funding_price : 0;
+
             const total_blood_donation_request = await donorCollection.estimatedDocumentCount();
-            res.send({ total_user, total_blood_donation_request })
+            res.send({ total_user, total_funding_price, total_blood_donation_request })
         });
         //======================== donor count related api part end =========================== */
 
@@ -425,28 +440,29 @@ async function run() {
         app.post('/create-payment-intent', async (req, res) => {
             const price = req.body.amount;
             const priceInCent = parseFloat(price * 100)
-            if(!price || priceInCent < 1) return
+            if (!price || priceInCent < 1) return
             // generate client-sectect
-            const {client_secret} = await stripe.paymentIntents.create({
+            const { client_secret } = await stripe.paymentIntents.create({
                 amount: priceInCent,
                 currency: "usd",
                 // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
                 automatic_payment_methods: {
-                  enabled: true,
+                    enabled: true,
                 },
             })
             // send client-secrect response
-            res.send({clientSecret: client_secret})
+            res.send({ clientSecret: client_secret })
         })
 
         // ok..
-        app.post('/fund/related/api/create', async (req, res)=>{
+        app.post('/fund/related/api/create', async (req, res) => {
             const fundData = req.body;
             const result = await fundsCollection.insertOne(fundData)
             res.send(result)
         })
 
-        app.get('/all/fundData/related/api/get', async(req, res)=>{
+        // ok...
+        app.get('/all/fundData/related/api/get', async (req, res) => {
             const result = await fundsCollection.find().toArray();
             res.send(result)
         })
