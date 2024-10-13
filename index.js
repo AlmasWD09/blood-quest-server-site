@@ -555,11 +555,6 @@ async function run() {
         })
         //======================== payment related api part end =========================== */
 
-
-
-
-
-
         await client.db("admin").command({ ping: 1 });
         console.log("successfully connected to MongoDB!");
     } finally {
